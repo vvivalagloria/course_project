@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "736339343939",
+    "project_id": "course-project-cfd98",
+    "storage_bucket": "course-project-cfd98.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:736339343939:android:9eafc533f389c5c9d6b2f6",
+        "android_client_info": {
+          "package_name": "com.example.course_project"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "736339343939-01pjlsnns4upf20m5mgldl8qkuqtt65p.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCgZID4d_ANZIDjONyJQrX54ZfuoFbUAn0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "736339343939-01pjlsnns4upf20m5mgldl8qkuqtt65p.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "736339343939-hu5uuokh2ng3opfg7tjd89sosk4hoe3g.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.courseProject"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
