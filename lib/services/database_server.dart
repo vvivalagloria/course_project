@@ -1,3 +1,4 @@
+// database_server.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../modules/todo.dart';
 
@@ -5,33 +6,34 @@ const String TODO_COLLECTION_REF = "todos";
 
 class DatabaseService {
   final _firestore = FirebaseFirestore.instance;
-
-  late final CollectionReference _todosRef;
+  late final CollectionReference<Todo> _todosRef;
 
   DatabaseService() {
     _todosRef = _firestore
         .collection(TODO_COLLECTION_REF)
         .withConverter<Todo>(
-          fromFirestore: (snapshots, _) => Todo.fromJson(snapshots.data()!),
-          toFirestore: (todo, _) => todo.toJson(),
-        );
+      fromFirestore: (snapshot, _) => Todo.fromJson(snapshot.data()!),
+      toFirestore: (todo, _) => todo.toJson(),
+    );
   }
 
-  Stream<QuerySnapshot> getTodos() {
-    return _todosRef.snapshots();
+  /// Now accepts the current user's UID and only returns that user's todos.
+  Stream<QuerySnapshot<Todo>> getTodos(String userId) {
+    return _todosRef
+        .where('userId', isEqualTo: userId)
+        .orderBy('createdOn', descending: true) // optional: order by date
+        .snapshots();
   }
 
-  void addTodo(Todo todo) async {
-    _todosRef.add(todo);
+  Future<void> addTodo(Todo todo) async {
+    await _todosRef.add(todo);
   }
 
-  void updateTodo(String todoId, Todo todo) {
-    _todosRef.doc(todoId).update(todo.toJson());
+  Future<void> updateTodo(String todoId, Todo todo) {
+    return _todosRef.doc(todoId).update(todo.toJson());
   }
 
-  void deleteTodo(String todoId){
-    _todosRef.doc(todoId).delete();
+  Future<void> deleteTodo(String todoId) {
+    return _todosRef.doc(todoId).delete();
   }
 }
-
-

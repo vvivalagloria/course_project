@@ -1,3 +1,4 @@
+// home_page.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:course_project/services/database_server.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -16,7 +17,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final TextEditingController _textEditingController = TextEditingController();
   final DatabaseService _databaseService = DatabaseService();
-
   final FirebaseAuth _auth = FirebaseAuth.instance;
   User? _user;
 
@@ -35,15 +35,21 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: _appBar(),
-      body:
-          _user != null
-              ? Column(children: [_userInfo()])
-              : Center(child: _googleSignInButton()),
-      floatingActionButton: FloatingActionButton(
+      body: _user != null
+          ? Column(
+        children: [
+          _userInfo(),
+          _buildUI(),
+        ],
+      )
+          : Center(child: _googleSignInButton()),
+      floatingActionButton: _user != null
+          ? FloatingActionButton(
         onPressed: _displayTextInputDialog,
         backgroundColor: Theme.of(context).colorScheme.primary,
         child: const Icon(Icons.add, color: Colors.white),
-      ),
+      )
+          : null,
     );
   }
 
@@ -55,7 +61,55 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildUI() {
-    return SafeArea(child: Column(children: [_messagesListView()]));
+    // We only get here if _user != null
+    return Expanded(
+      child: StreamBuilder<QuerySnapshot<Todo>>(
+        stream: _databaseService.getTodos(_user!.uid),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final docs = snapshot.data?.docs ?? [];
+          if (docs.isEmpty) {
+            return const Center(child: Text("Add a todo!"));
+          }
+          return ListView.builder(
+            itemCount: docs.length,
+            itemBuilder: (context, index) {
+              final todoDoc = docs[index];
+              final todo = todoDoc.data();
+              final todoId = todoDoc.id;
+              return Padding(
+                padding:
+                const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                child: ListTile(
+                  tileColor:
+                  Theme.of(context).colorScheme.primaryContainer,
+                  title: Text(todo.task),
+                  subtitle: Text(
+                    DateFormat("dd-MM-yyyy h:mm a")
+                        .format(todo.updatedOn.toDate()),
+                  ),
+                  trailing: Checkbox(
+                    value: todo.isDone,
+                    onChanged: (_) {
+                      final updatedTodo = todo.copyWith(
+                        isDone: !todo.isDone,
+                        updatedOn: Timestamp.now(),
+                      );
+                      _databaseService.updateTodo(todoId, updatedTodo);
+                    },
+                  ),
+                  onLongPress: () {
+                    _databaseService.deleteTodo(todoId);
+                  },
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
   }
 
   Widget _googleSignInButton() {
@@ -64,9 +118,7 @@ class _HomePageState extends State<HomePage> {
         height: 50,
         child: SignInButton(
           buttonType: ButtonType.google,
-          onPressed: () {
-            _handleUserSignIn();
-          },
+          onPressed: _handleUserSignIn,
         ),
       ),
     );
@@ -83,79 +135,26 @@ class _HomePageState extends State<HomePage> {
 
   Widget _userInfo() {
     return SizedBox(
-      height: MediaQuery.sizeOf(context).height * 0.80,
-      width: MediaQuery.sizeOf(context).width,
+      height: MediaQuery.of(context).size.height * 0.30,
+      width: MediaQuery.of(context).size.width,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisSize: MainAxisSize.max,
         children: [
-          Container(
-            height: 100,
-            width: 100,
-            decoration: BoxDecoration(
-              image: DecorationImage(image: NetworkImage(_user!.photoURL!)),
-            ),
+          CircleAvatar(
+            radius: 40,
+            backgroundImage: NetworkImage(_user!.photoURL!),
           ),
+          const SizedBox(height: 8),
+          Text(_user!.displayName ?? "",
+              style: const TextStyle(fontSize: 16)),
           Text(_user!.email!),
-          Text(_user!.displayName ?? ""),
-          MaterialButton(
-            color: Colors.red,
-            child: const Text("Sign Out"),
+          const SizedBox(height: 8),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: _auth.signOut,
-          ),
+            child: const Text("Sign Out"),
+          )
         ],
-      ),
-    );
-  }
-
-  Widget _messagesListView() {
-    return SizedBox(
-      height: MediaQuery.sizeOf(context).height * 0.80,
-      width: MediaQuery.sizeOf(context).width,
-      child: StreamBuilder(
-        stream: _databaseService.getTodos(),
-        builder: (context, snapshot) {
-          List todos = snapshot.data?.docs ?? [];
-          if (todos.isEmpty) {
-            return const Center(child: Text("Add a todo!"));
-          }
-          return ListView.builder(
-            itemCount: todos.length,
-            itemBuilder: (context, index) {
-              Todo todo = todos[index].data();
-              String todoId = todos[index].id;
-              return Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 10,
-                  horizontal: 10,
-                ),
-                child: ListTile(
-                  tileColor: Theme.of(context).colorScheme.primaryContainer,
-                  title: Text(todo.task),
-                  subtitle: Text(
-                    DateFormat(
-                      "dd-MM-yyyy h:mm a",
-                    ).format(todo.updatedOn.toDate()),
-                  ),
-                  trailing: Checkbox(
-                    value: todo.isDone,
-                    onChanged: (value) {
-                      Todo updatedTodo = todo.copyWith(
-                        isDone: !todo.isDone,
-                        updatedOn: Timestamp.now(),
-                      );
-                      _databaseService.updateTodo(todoId, updatedTodo);
-                    },
-                  ),
-                  onLongPress: () {
-                    _databaseService.deleteTodo(todoId);
-                  },
-                ),
-              );
-            },
-          );
-        },
       ),
     );
   }
@@ -176,13 +175,14 @@ class _HomePageState extends State<HomePage> {
               textColor: Colors.white,
               child: const Text('Ok'),
               onPressed: () {
-                Todo todo = Todo(
+                final newTodo = Todo(
                   task: _textEditingController.text,
                   isDone: false,
                   createdOn: Timestamp.now(),
                   updatedOn: Timestamp.now(),
+                  userId: _user!.uid, // PASS the current user's UID here
                 );
-                _databaseService.addTodo(todo);
+                _databaseService.addTodo(newTodo);
                 Navigator.pop(context);
                 _textEditingController.clear();
               },
