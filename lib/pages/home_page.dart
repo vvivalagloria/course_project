@@ -1,38 +1,57 @@
+<<<<<<< Updated upstream
 // home_page.dart
+=======
+import 'dart:async';
+>>>>>>> Stashed changes
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:course_project/services/database_server.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:sign_button/sign_button.dart';
 import '../modules/todo.dart';
+import '../services/auth_service.dart';
+import '../services/database_service.dart';
+import '../widgets/connectivity_banner.dart';
+import '../widgets/todo_list_item.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({Key? key}) : super(key: key);
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
+<<<<<<< Updated upstream
   final TextEditingController _textEditingController = TextEditingController();
   final DatabaseService _databaseService = DatabaseService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   User? _user;
+=======
+  final _db = DatabaseService();
+  final _auth = AuthService();
+  late final StreamSubscription _authSub;
+>>>>>>> Stashed changes
 
   @override
   void initState() {
     super.initState();
-    _auth.authStateChanges().listen((event) {
-      setState(() {
-        _user = event;
-      });
+    // listen for sign-out and send user back to login
+    _authSub = _auth.authStateChanges.listen((user) {
+      if (user == null) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
     });
   }
 
   @override
+  void dispose() {
+    _authSub.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final user = _auth.currentUser!;
     return Scaffold(
+<<<<<<< Updated upstream
       resizeToAvoidBottomInset: false,
       appBar: _appBar(),
       body: _user != null
@@ -190,6 +209,48 @@ class _HomePageState extends State<HomePage> {
           ],
         );
       },
+=======
+      appBar: AppBar(
+        title: const Text('Your Todos'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => _auth.signOut(),
+          )
+        ],
+      ),
+      body: Column(
+        children: [
+          const ConnectivityBanner(),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot<Todo>>(
+              stream: _db.getTodos(user.uid),
+              builder: (ctx, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final docs = snap.data?.docs ?? [];
+                if (docs.isEmpty) {
+                  return const Center(child: Text('No todos yet'));
+                }
+                return ListView(
+                  children: docs
+                      .map((doc) => TodoListItem(
+                    todo: doc.data(),
+                    docId: doc.id,
+                  ))
+                      .toList(),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.pushNamed(context, '/edit'),
+        child: const Icon(Icons.add),
+      ),
+>>>>>>> Stashed changes
     );
   }
 }
